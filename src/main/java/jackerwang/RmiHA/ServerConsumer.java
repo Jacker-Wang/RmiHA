@@ -25,11 +25,10 @@ public class ServerConsumer {
 	ZooKeeper zk = null;
 
 	public ServerConsumer() {
-		zk=connectZoo(Constant.ZooHost, Constant.ZooPort);
-		if(zk!=null) {
+		zk = connectZoo(Constant.ZooHost, Constant.ZooPort);
+		if (zk != null) {
 			System.out.println("ServerConsumer连接上zookeeper，host:" + Constant.ZooHost + "---port:" + Constant.ZooPort);
-     	} 
-		else {
+		} else {
 			System.out.println("ServerConsumer连接zookeeper失败");
 		}
 		watchNode(zk);
@@ -66,6 +65,7 @@ public class ServerConsumer {
 	private void watchNode(final ZooKeeper zk) {
 		List<String> dataList = new ArrayList<String>();
 		try {
+			// 得到孩子节点列表
 			dataList = zk.getChildren(Constant.REGISTRYZ_PATH, new Watcher() {
 				public void process(WatchedEvent event) {
 					// 如果观察到节点变化，则得到最新状态的节点信息,即继续观察节点
@@ -77,7 +77,10 @@ public class ServerConsumer {
 			// 得到每个节点中的数据
 			List<String> tmpList = new ArrayList<String>();
 			for (String node : dataList) {
-				String url = String.valueOf(node.getBytes());
+				// 根据孩子节点得到节点中的数据
+				byte[] data = zk.getData(Constant.REGISTRYZ_PATH + "/" + node, false, null);
+				String url = new String(data);
+				System.out.println("consumer找到服务的url " + url);
 				tmpList.add(url);
 			}
 			urList = tmpList;
@@ -90,37 +93,39 @@ public class ServerConsumer {
 			e.printStackTrace();
 		}
 	}
-	
-	//需找远程server
+
+	// 需找远程server
 	private <T> T lookUpServer(String url) {
-		T server=null;
+		T server = null;
 		try {
-			server=(T)Naming.lookup(url);
+			server = (T) Naming.lookup(url);
 		} catch (Exception e) {
-			//如果连接失败，则选取第一个url进行重新连接
-			if(e instanceof ConnectException) {
-				url=urList.get(0);
-				lookUpServer(url);
+			// 如果连接失败，则选取第一个url进行重新连接
+			if (e instanceof ConnectException) {
+				if (urList.size() != 0) {
+					url = urList.get(0);
+					lookUpServer(url);
+				}
 			}
 			e.printStackTrace();
 		}
 		return server;
 	}
-	
-	//通过urlList寻找远程url
-	public <T extends Remote> T lookUp(){
-		T server=null;
-		int size=urList.size();
-		String url=null;
-		if(size>0) {
-			if(size>1) {
-				url=urList.get(ThreadLocalRandom.current().nextInt(size));
-			}
-			else {
-				url=urList.get(0);
+
+	// 通过urlList寻找远程url
+	public <T extends Remote> T lookUp() {
+		T server = null;
+		int size = urList.size();
+		String url = null;
+		if (size > 0) {
+			if (size > 1) {
+				url = urList.get(ThreadLocalRandom.current().nextInt(size));
+			} else {
+				url = urList.get(0);
 			}
 		}
-		server=lookUpServer(url);
+		System.out.println("Consumer选择服务 " + url);
+		server = lookUpServer(url);
 		return server;
 	}
 }

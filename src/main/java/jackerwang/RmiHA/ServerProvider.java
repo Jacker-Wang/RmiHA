@@ -82,8 +82,9 @@ public class ServerProvider {
 		byte[] data = serverUrl.getBytes();
 		String path = null;
 		try {
-			path = zk.create(Constant.REGISTRYZ_PATH, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+			path = zk.create(Constant.PROVIDER_PATH, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL_SEQUENTIAL);
+			System.out.println("创建节点 "+path);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
